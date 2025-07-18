@@ -12,7 +12,7 @@ _start:
     mov ss, ax
 
     ; безопасная настройка стека (ниже MBR)
-    mov ax, 0x7100                      ; сегмент стека = 0x7100
+    mov ax, 0x7000                      ; сегмент стека = 0x7100
     mov ss, ax
     mov sp, 0x0                         ; вершина стека (0x0000)
 
@@ -22,7 +22,8 @@ _start:
 
     ; отключаем курсор BIOS
     mov ah, 0x1                         ; функция установки формы курсора
-    mov ch, 0x2607                      ; ch=0x26 (бит 5 установлен - скрыть курсор), cl=0x07
+    mov ch, 0x26    ; Бит 5 установлен (скрыть курсор)
+    mov cl, 0x07    ; Нижняя линия курсора
     int 0x10
 
     ; настройка доступа к видеопамяти
@@ -31,45 +32,80 @@ _start:
     xor di, di                          ; di = 0 (начало видеобуфера)
 
 main_loop:
-    ; рисуем левую платформу
-    mov cx, [start_left_platform_pos_x] ; x-позиция
-    mov dx, [start_left_platform_pos_y] ; y-позиция
-    mov bx, [left_platform_height]      ; высота
-    mov ax, [left_platform_color]       ; цвет
+    ; обработка ввода с клавиатуры для ВСЕХ платформ
+    call handle_keyboard
+
+    ; проверка изменений для ЛЕВОЙ платформы
+    mov ax, [prev_left_platform_pos_y]
+    cmp ax, [start_left_platform_pos_y]
+    je .no_redraw_left
+
+    ; перерисовка левой платформы
+    mov cx, [start_left_platform_pos_x]
+    mov dx, [prev_left_platform_pos_y]
+    mov bx, [left_platform_height]
+    call erase_platform
+
+    mov cx, [start_left_platform_pos_x]
+    mov dx, [start_left_platform_pos_y]
+    mov bx, [left_platform_height]
+    mov ah, [left_platform_color]
     call draw_platform
 
-    ; рисуем правую платформу
-    mov cx, [start_right_platform_pos_x] ; x-позиция
-    mov dx, [start_right_platform_pos_y] ; y-позиция
-    mov bx, [right_platform_height]      ; высота
-    mov ax, [right_platform_color]       ; цвет
+    mov ax, [start_left_platform_pos_y]
+    mov [prev_left_platform_pos_y], ax
+
+.no_redraw_left:
+    ; проверка изменений для ПРАВОЙ платформы
+    mov ax, [prev_right_platform_pos_y]
+    cmp ax, [start_right_platform_pos_y]
+    je .end_redraw
+
+    ; перерисовка правой платформы
+    mov cx, [start_right_platform_pos_x]
+    mov dx, [prev_right_platform_pos_y]
+    mov bx, [right_platform_height]
+    call erase_platform
+
+    mov cx, [start_right_platform_pos_x]
+    mov dx, [start_right_platform_pos_y]
+    mov bx, [right_platform_height]
+    mov ah, [right_platform_color]
     call draw_platform
 
-    ; рисуем мяч
-    mov cx, [start_ball_pos_x]           ; x-позиция
-    mov dx, [start_ball_pos_y]           ; y-позиция
-    mov ax, [ball_color]                 ; цвет
-    call draw_ball
+    mov ax, [start_right_platform_pos_y]
+    mov [prev_right_platform_pos_y], ax
 
-    jmp main_loop                        ; бесконечный цикл
+.end_redraw:
+    call delay
+    jmp main_loop
 
-; включение файла с функциями рисования
+; включение файлов
 %include "src/drawing_elements.asm"
+%include "src/keyboard.asm"
+%include "src/erase_platform.asm"
+%include "src/delay.asm"
 
 ; переменные
-start_left_platform_pos_x dw 0x1
-start_left_platform_pos_y dw 0xa
-left_platform_height dw 0x5
-left_platform_color dw 0x44
+prev_left_platform_pos_y   dw 0x0
+start_left_platform_pos_x  dw 0x1
+start_left_platform_pos_y  dw 0xa
+left_platform_height       dw 0x5
+left_platform_color        db 0x44
+left_platform_key_up       db 0x11    ; W
+left_platform_key_down     db 0x1f    ; S
 
+prev_right_platform_pos_y  dw 0x0
 start_right_platform_pos_x dw 0x4E
 start_right_platform_pos_y dw 0xa
-right_platform_height dw 0x5
-right_platform_color dw 0x11
+right_platform_height      dw 0x5
+right_platform_color       db 0x11
+right_platform_key_up      db 0x48    ; Стрелка вверх
+right_platform_key_down    db 0x50    ; Стрелка вниз
 
-start_ball_pos_x dw 0x23
-start_ball_pos_y dw 0xa
-ball_color dw 0xee
+start_ball_pos_x           dw 0x23
+start_ball_pos_y           dw 0xa
+ball_color                 db 0xee
 
 ; заполнение до 510 байт и сигнатура загрузочного сектора
 times 510 - ($ - $$) db 0

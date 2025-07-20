@@ -1,7 +1,5 @@
 ; обработка нажатий на клавиши
 handle_keyboard:
-    pusha
-
 ; проверяем наличие нажатых клавиш в буфере
 .process_keys:
     ; проверяем, есть ли клавиши в буфере
@@ -25,16 +23,15 @@ handle_keyboard:
     cmp ah, [right_platform_key_down]
     je .right_down
 
-    jmp .process_keys ; продолжаем обработку других клавиш
+    jmp short .process_keys
 
 .left_up:
     ; двигаем левую платформу вверх
     mov ax, [current_left_platform_pos_y]
     cmp ax, 1
     jle .process_keys
-    dec ax
-    mov [current_left_platform_pos_y], ax
-    jmp .process_keys
+    dec word [current_left_platform_pos_y]  
+    jmp short .process_keys
 
 .left_down:
     ; двигаем левую платформу вниз
@@ -43,19 +40,16 @@ handle_keyboard:
     add ax, bx
     cmp ax, 24
     jge .process_keys
-    mov ax, [current_left_platform_pos_y]
-    inc ax
-    mov [current_left_platform_pos_y], ax
-    jmp .process_keys
+    inc word [current_left_platform_pos_y]  
+    jmp short .process_keys
 
 .right_up:
     ; двигаем правую платформу вверх
     mov ax, [current_right_platform_pos_y]
     cmp ax, 1
     jle .process_keys
-    dec ax
-    mov [current_right_platform_pos_y], ax
-    jmp .process_keys
+    dec word [current_right_platform_pos_y]  
+    jmp short .process_keys
 
 .right_down:
     ; двигаем правую платформу вниз
@@ -64,11 +58,8 @@ handle_keyboard:
     add ax, bx
     cmp ax, 24
     jge .process_keys
-    mov ax, [current_right_platform_pos_y]
-    inc ax
-    mov [current_right_platform_pos_y], ax
-    jmp .process_keys
+    inc word [current_right_platform_pos_y]
+    jmp short .process_keys
 
 .no_keys:
-    popa
     ret

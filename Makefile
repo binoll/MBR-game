@@ -8,16 +8,12 @@ NASMFLAGS := -fbin -I$(SRC_DIR)
 
 all: run
 
-run: $(BIN_TARGET)
-	$(QEMU) -drive format=raw,file=$<
+run: build
+	$(QEMU) -drive format=raw,file=$(BIN_TARGET)
 
-$(BIN_TARGET): $(ASM_SRC) | $(BUILD_DIR)
-	$(NASM) $(NASMFLAGS) $< -o $@
-
-$(BUILD_DIR):
-	mkdir -p $@
-
-build: $(BIN_TARGET)
+build:
+	mkdir -p $(BUILD_DIR)
+	$(NASM) $(NASMFLAGS) $(ASM_SRC) -o $(BIN_TARGET)
 
 clean:
 	rm -rf $(BUILD_DIR)
